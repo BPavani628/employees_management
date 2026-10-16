@@ -13,6 +13,8 @@ from .models import Employee
 from .forms import EmployeeForm
 import os
 import json
+from dotenv import load_dotenv
+load_dotenv()
 
 # ----------------- AUTHENTICATION VIEWS ----------------- #
 
