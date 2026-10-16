@@ -14,7 +14,7 @@ from .forms import EmployeeForm
 import os
 import json
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)
 
 # ----------------- AUTHENTICATION VIEWS ----------------- #
 
@@ -174,7 +174,8 @@ def agent_chatbot(request):
             context_data = get_employee_database_context()
 
             # Initialize OpenAI client
-            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            raw_key = os.getenv("OPENAI_API_KEY", "")
+            client = OpenAI(api_key=raw_key.strip())
 
             system_instruction = (
                 "You are an AI Assistant for an Employee Management System. "
