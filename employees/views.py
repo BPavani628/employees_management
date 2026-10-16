@@ -123,13 +123,15 @@ def employee_delete(request, pk):
     return render(request, 'employees/employee_confirm_delete.html', {'employee': employee})
 # ----------------- AI AGENT CHATBOT ----------------- #
 
+# ----------------- AI AGENT CHATBOT ----------------- #
+
 def get_employee_database_context():
     """Compiles key employee database stats and records for LLM context."""
     total_count = Employee.objects.count()
     total_payroll = Employee.objects.aggregate(Sum('salary'))['salary__sum'] or 0
     avg_payroll = Employee.objects.aggregate(Avg('salary'))['salary__avg'] or 0
     
-    # Retrieve records and ensure Decimals are converted to float
+    # Retrieve records and convert Decimal values to float
     raw_employees = Employee.objects.all().values('id', 'name', 'emp_id', 'department', 'designation', 'salary')[:25]
     
     employees = []
@@ -150,6 +152,7 @@ def get_employee_database_context():
         "sample_records": employees
     }
 
+
 @login_required(login_url='login')
 def agent_chatbot(request):
     """
@@ -167,7 +170,7 @@ def agent_chatbot(request):
             if not user_message:
                 return JsonResponse({'error': 'Message cannot be empty.'}, status=400)
 
-            # Retrieve database context
+            # Retrieve database context with serializable data
             context_data = get_employee_database_context()
 
             # Initialize OpenAI client
