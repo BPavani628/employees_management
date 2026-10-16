@@ -7,6 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import Q, Sum, Avg
+from django.http import JsonResponse
+from openai import OpenAI
 from .models import Employee
 from .forms import EmployeeForm
 
@@ -115,3 +117,69 @@ def employee_delete(request, pk):
         return redirect('employee_list')
 
     return render(request, 'employees/employee_confirm_delete.html', {'employee': employee})
+# ----------------- AI AGENT CHATBOT ----------------- #
+
+def get_employee_database_context():
+    """Compiles key employee database stats and records for LLM context."""
+    total_count = Employee.objects.count()
+    total_payroll = Employee.objects.aggregate(Sum('salary'))['salary__sum'] or 0
+    avg_payroll = Employee.objects.aggregate(Avg('salary'))['salary__avg'] or 0
+    
+    # Retrieve top records
+    employees = list(Employee.objects.all().values('id', 'name', 'emp_id', 'salary')[:25])
+    
+    return {
+        "total_employees": total_count,
+        "total_payroll": float(total_payroll),
+        "average_salary": float(avg_payroll),
+        "sample_records": employees
+    }
+
+
+@login_required(login_url='login')
+def agent_chatbot(request):
+    """
+    Renders the chat interface on GET.
+    Processes user query and returns agent response on POST (JSON).
+    """
+    if request.method == 'GET':
+        return render(request, 'employees/chatbot.html')
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+
+            if not user_message:
+                return JsonResponse({'error': 'Message cannot be empty.'}, status=400)
+
+            # Retrieve database context
+            context_data = get_employee_database_context()
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+            system_instruction = (
+                "You are an AI Assistant for an Employee Management System. "
+                "You help HR and management by querying employee records, explaining company data, "
+                "and summarizing payroll. "
+                f"Current Database Context: {json.dumps(context_data)}. "
+                "Keep answers accurate, professional, and concise."
+            )
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.3
+            )
+
+            bot_reply = response.choices[0].message.content
+            return JsonResponse({'reply': bot_reply})
+
+        except Exception as e:
+            return JsonResponse({'error': f"Agent Error: {str(e)}"}, status=500)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
