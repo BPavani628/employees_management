@@ -8,7 +8,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import Q, Sum, Avg
 from django.http import JsonResponse
-from openai import OpenAI
+from google import genai
 from .models import Employee
 from .forms import EmployeeForm
 import os
@@ -157,7 +157,7 @@ def get_employee_database_context():
 def agent_chatbot(request):
     """
     Renders the chat interface on GET.
-    Processes user query and returns agent response on POST (JSON).
+    Processes user query using Google Gemini API on POST (JSON).
     """
     if request.method == 'GET':
         return render(request, 'employees/chatbot.html')
@@ -170,12 +170,12 @@ def agent_chatbot(request):
             if not user_message:
                 return JsonResponse({'error': 'Message cannot be empty.'}, status=400)
 
-            # Retrieve database context with serializable data
+            # Retrieve database context
             context_data = get_employee_database_context()
 
-            # Initialize OpenAI client
-            raw_key = os.getenv("OPENAI_API_KEY", "")
-            client = OpenAI(api_key=raw_key.strip())
+            # Initialize Google GenAI client
+            api_key = os.getenv("GEMINI_API_KEY", "").strip()
+            client = genai.Client(api_key=api_key)
 
             system_instruction = (
                 "You are an AI Assistant for an Employee Management System. "
@@ -185,16 +185,14 @@ def agent_chatbot(request):
                 "Keep answers accurate, professional, and concise."
             )
 
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": user_message}
-                ],
-                temperature=0.3
+            prompt = f"System Instruction: {system_instruction}\n\nUser Question: {user_message}"
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
             )
 
-            bot_reply = response.choices[0].message.content
+            bot_reply = response.text
             return JsonResponse({'reply': bot_reply})
 
         except Exception as e:
