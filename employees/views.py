@@ -15,6 +15,9 @@ import os
 import json
 from dotenv import load_dotenv
 load_dotenv(override=True)
+key = os.getenv("GEMINI_API_KEY")
+print("Length:", len(key) if key else 0)
+print("Starts with:", key[:7] if key else "None")
 
 # ----------------- AUTHENTICATION VIEWS ----------------- #
 
