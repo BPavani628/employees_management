@@ -191,7 +191,7 @@ def agent_chatbot(request):
             prompt = f"System Instruction: {system_instruction}\n\nUser Question: {user_message}"
 
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.8-flash",
                 contents=prompt
             )
 
