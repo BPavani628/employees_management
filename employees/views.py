@@ -129,16 +129,26 @@ def get_employee_database_context():
     total_payroll = Employee.objects.aggregate(Sum('salary'))['salary__sum'] or 0
     avg_payroll = Employee.objects.aggregate(Avg('salary'))['salary__avg'] or 0
     
-    # Retrieve top records
-    employees = list(Employee.objects.all().values('id', 'name', 'emp_id', 'salary')[:25])
+    # Retrieve records and ensure Decimals are converted to float
+    raw_employees = Employee.objects.all().values('id', 'name', 'emp_id', 'department', 'designation', 'salary')[:25]
+    
+    employees = []
+    for emp in raw_employees:
+        employees.append({
+            "id": emp.get('id'),
+            "name": emp.get('name'),
+            "emp_id": emp.get('emp_id'),
+            "department": emp.get('department'),
+            "designation": emp.get('designation'),
+            "salary": float(emp.get('salary')) if emp.get('salary') is not None else 0.0,
+        })
     
     return {
         "total_employees": total_count,
         "total_payroll": float(total_payroll),
-        "average_salary": float(avg_payroll),
+        "average_salary": round(float(avg_payroll), 2),
         "sample_records": employees
     }
-
 
 @login_required(login_url='login')
 def agent_chatbot(request):
