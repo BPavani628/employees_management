@@ -11,6 +11,8 @@ from django.http import JsonResponse
 from openai import OpenAI
 from .models import Employee
 from .forms import EmployeeForm
+import os
+import json
 
 # ----------------- AUTHENTICATION VIEWS ----------------- #
 
